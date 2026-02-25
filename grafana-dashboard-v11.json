@@ -54,7 +54,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Shows whether CPU/Memory requests and limits are configured for each workload in the namespace.",
+      "description": "Shows whether CPU/Memory requests and limits are configured for each workload in the namespace.\n\nGREEN (SET ALL): All containers have the resource configured\nYELLOW (PARTIAL): Some containers have the resource configured\nRED (UNSET): No containers have the resource configured\n\nNote: CPU Limit shows YELLOW for UNSET (less critical than requests).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -70,25 +70,46 @@
           "mappings": [
             {
               "options": {
-                "0": {
+                "from": 0,
+                "to": 0,
+                "result": {
                   "color": "red",
-                  "index": 1,
-                  "text": "UNSET"
-                },
-                "1": {
-                  "color": "green",
                   "index": 0,
-                  "text": "SET"
+                  "text": "UNSET"
                 }
               },
-              "type": "value"
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 0.001,
+                "to": 0.999,
+                "result": {
+                  "color": "yellow",
+                  "index": 1,
+                  "text": "PARTIAL"
+                }
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 1,
+                "to": 1,
+                "result": {
+                  "color": "green",
+                  "index": 2,
+                  "text": "SET ALL"
+                }
+              },
+              "type": "range"
             },
             {
               "options": {
                 "match": "null",
                 "result": {
                   "color": "red",
-                  "index": 2,
+                  "index": 3,
                   "text": "UNSET"
                 }
               },
@@ -101,6 +122,10 @@
               {
                 "color": "red",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.001
               },
               {
                 "color": "green",
@@ -167,25 +192,46 @@
                 "value": [
                   {
                     "options": {
-                      "0": {
+                      "from": 0,
+                      "to": 0,
+                      "result": {
                         "color": "yellow",
-                        "index": 1,
-                        "text": "UNSET"
-                      },
-                      "1": {
-                        "color": "green",
                         "index": 0,
-                        "text": "SET"
+                        "text": "UNSET"
                       }
                     },
-                    "type": "value"
+                    "type": "range"
+                  },
+                  {
+                    "options": {
+                      "from": 0.001,
+                      "to": 0.999,
+                      "result": {
+                        "color": "yellow",
+                        "index": 1,
+                        "text": "PARTIAL"
+                      }
+                    },
+                    "type": "range"
+                  },
+                  {
+                    "options": {
+                      "from": 1,
+                      "to": 1,
+                      "result": {
+                        "color": "green",
+                        "index": 2,
+                        "text": "SET ALL"
+                      }
+                    },
+                    "type": "range"
                   },
                   {
                     "options": {
                       "match": "null",
                       "result": {
                         "color": "yellow",
-                        "index": 2,
+                        "index": 3,
                         "text": "UNSET"
                       }
                     },
@@ -201,6 +247,10 @@
                     {
                       "color": "yellow",
                       "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.001
                     },
                     {
                       "color": "green",
@@ -254,7 +304,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "clamp_max(\n  count by (workload) (\n    label_replace(\n      kube_pod_container_resource_requests{namespace=\"$namespace\", resource=\"cpu\", container!=\"\"}\n      * on(pod, namespace) group_left(created_by_name)\n        (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n      \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n    )\n  ),\n  1\n)",
+          "expr": "(\n  count by (workload) (\n    label_replace(\n      kube_pod_container_resource_requests{namespace=\"$namespace\", resource=\"cpu\", container!=\"\"}\n      * on(pod, namespace) group_left(created_by_name)\n        (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n      \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n    )\n  )\n  or\n  (\n    count by (workload) (\n      label_replace(\n        kube_pod_container_info{namespace=\"$namespace\", container!=\"\"}\n        * on(pod, namespace) group_left(created_by_name)\n          (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n        \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n      )\n    ) * 0\n  )\n)\n/\ncount by (workload) (\n  label_replace(\n    kube_pod_container_info{namespace=\"$namespace\", container!=\"\"}\n    * on(pod, namespace) group_left(created_by_name)\n      (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n    \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n  )\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -269,7 +319,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "clamp_max(\n  count by (workload) (\n    label_replace(\n      kube_pod_container_resource_limits{namespace=\"$namespace\", resource=\"cpu\", container!=\"\"}\n      * on(pod, namespace) group_left(created_by_name)\n        (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n      \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n    )\n  ),\n  1\n)",
+          "expr": "(\n  count by (workload) (\n    label_replace(\n      kube_pod_container_resource_limits{namespace=\"$namespace\", resource=\"cpu\", container!=\"\"}\n      * on(pod, namespace) group_left(created_by_name)\n        (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n      \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n    )\n  )\n  or\n  (\n    count by (workload) (\n      label_replace(\n        kube_pod_container_info{namespace=\"$namespace\", container!=\"\"}\n        * on(pod, namespace) group_left(created_by_name)\n          (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n        \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n      )\n    ) * 0\n  )\n)\n/\ncount by (workload) (\n  label_replace(\n    kube_pod_container_info{namespace=\"$namespace\", container!=\"\"}\n    * on(pod, namespace) group_left(created_by_name)\n      (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n    \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n  )\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -284,7 +334,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "clamp_max(\n  count by (workload) (\n    label_replace(\n      kube_pod_container_resource_requests{namespace=\"$namespace\", resource=\"memory\", container!=\"\"}\n      * on(pod, namespace) group_left(created_by_name)\n        (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n      \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n    )\n  ),\n  1\n)",
+          "expr": "(\n  count by (workload) (\n    label_replace(\n      kube_pod_container_resource_requests{namespace=\"$namespace\", resource=\"memory\", container!=\"\"}\n      * on(pod, namespace) group_left(created_by_name)\n        (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n      \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n    )\n  )\n  or\n  (\n    count by (workload) (\n      label_replace(\n        kube_pod_container_info{namespace=\"$namespace\", container!=\"\"}\n        * on(pod, namespace) group_left(created_by_name)\n          (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n        \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n      )\n    ) * 0\n  )\n)\n/\ncount by (workload) (\n  label_replace(\n    kube_pod_container_info{namespace=\"$namespace\", container!=\"\"}\n    * on(pod, namespace) group_left(created_by_name)\n      (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n    \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n  )\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -299,7 +349,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "clamp_max(\n  count by (workload) (\n    label_replace(\n      kube_pod_container_resource_limits{namespace=\"$namespace\", resource=\"memory\", container!=\"\"}\n      * on(pod, namespace) group_left(created_by_name)\n        (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n      \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n    )\n  ),\n  1\n)",
+          "expr": "(\n  count by (workload) (\n    label_replace(\n      kube_pod_container_resource_limits{namespace=\"$namespace\", resource=\"memory\", container!=\"\"}\n      * on(pod, namespace) group_left(created_by_name)\n        (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n      \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n    )\n  )\n  or\n  (\n    count by (workload) (\n      label_replace(\n        kube_pod_container_info{namespace=\"$namespace\", container!=\"\"}\n        * on(pod, namespace) group_left(created_by_name)\n          (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n        \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n      )\n    ) * 0\n  )\n)\n/\ncount by (workload) (\n  label_replace(\n    kube_pod_container_info{namespace=\"$namespace\", container!=\"\"}\n    * on(pod, namespace) group_left(created_by_name)\n      (group by (pod, namespace, created_by_name, created_by_kind) (kube_pod_info{namespace=\"$namespace\", created_by_kind=~\"$workload_kinds\"})),\n    \"workload\", \"$1\", \"created_by_name\", \"^(.+?)(?:-[a-z0-9]{8,10}|-\\\\d+)?$\"\n  )\n)",
           "format": "table",
           "hide": false,
           "instant": true,

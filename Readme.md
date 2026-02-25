@@ -77,7 +77,9 @@ Bash script for managing dashboards on a Grafana server.
 | `--namespace-filter REGEX` | Filter namespaces by regex (default: `.*` = all) |
 | `--workload-kinds KINDS` | Pod owner kinds to include (default: `ReplicaSet\|ReplicationController\|StatefulSet`) |
 | `--datasource-regex REGEX` | Filter Prometheus datasources by regex, e.g., `/.*-prod.*/` (default: `""` = all) |
-| `--grafana-version VER` | Target Grafana version: `10` (default) or `11` |
+| `--grafana-version VER` | Target Grafana version: `10` or `11` (default) |
+| `--skip-docs` | Skip importing documentation dashboards |
+| `--docs-folder TITLE` | Import documentation dashboards to a separate folder |
 
 #### Examples
 
@@ -107,12 +109,17 @@ export GRAFANA_PASSWORD="secret"
 ./manage-dashboards.sh import --url https://grafana.example.com \
   --folder "Production" --user admin --password secret \
   --datasource-regex "/.*-prod.*/"
+
+# Import documentation dashboards to a separate folder
+./manage-dashboards.sh import --url https://grafana.example.com \
+  --folder "Dashboards" --docs-folder "Documentation" \
+  --user admin --password secret
 ```
 
 ## Requirements
 
-- **Grafana 10.x**: Use default dashboards (`--grafana-version 10` or omit the flag)
-- **Grafana 11.x+**: Use v11 dashboards (`--grafana-version 11`)
+- **Grafana 11.x+**: Use default dashboards (`--grafana-version 11` or omit the flag)
+- **Grafana 10.x**: Use v10 dashboards (`--grafana-version 10`)
 - Prometheus datasource with Kubernetes metrics:
   - `container_cpu_usage_seconds_total`
   - `container_memory_working_set_bytes`

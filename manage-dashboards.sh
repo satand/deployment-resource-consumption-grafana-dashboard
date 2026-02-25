@@ -25,6 +25,8 @@ NAMESPACE_FILTER=""  # Optional namespace filter regex for PromQL query (default
 WORKLOAD_KINDS=""  # Optional workload kinds override (default in dashboards: ReplicaSet|ReplicationController|StatefulSet)
 DATASOURCE_REGEX=""  # Optional datasource regex filter
 GRAFANA_VERSION=""  # Optional Grafana version for compatibility (10 or 11)
+SKIP_DOCS=false  # Skip importing documentation dashboards
+DOCS_FOLDER=""  # Optional separate folder for documentation dashboards
 
 # Dashboard files (v10 compatible - default)
 DASHBOARDS_V10=(
@@ -42,8 +44,8 @@ DASHBOARDS_V11=(
     "grafana-dashboard-workload-docs.json"
 )
 
-# Default to v10 dashboards
-DASHBOARDS=("${DASHBOARDS_V10[@]}")
+# Default to v11 dashboards
+DASHBOARDS=("${DASHBOARDS_V11[@]}")
 
 # Dashboard UIDs (must match the uid in each JSON file)
 DASHBOARD_UIDS=(
@@ -121,8 +123,11 @@ Options:
                             (e.g., "/.*-prod.*/" or "/prometheus-.*/")
                             Filters which datasources appear in the dropdown
     --grafana-version VER   Target Grafana version for compatibility (10 or 11)
-                            Default: 10 (uses seriesToColumns transformation)
-                            Use 11 for Grafana v11+ (uses joinByField transformation)
+                            Default: 11 (uses joinByField transformation)
+                            Use 10 for Grafana v10.x (uses seriesToColumns transformation)
+    --skip-docs             Skip importing documentation dashboards
+    --docs-folder TITLE     Import documentation dashboards to a separate folder
+                            (default: same as --folder)
     --insecure              Skip TLS certificate verification (for self-signed certs)
     -h, --help              Show this help message
 
@@ -167,6 +172,12 @@ Examples:
 
     # Import with datasource regex filter (only show datasources matching pattern)
     $(basename "$0") --user myuser --password mypass --datasource-regex "/.*-prod.*/" import
+
+    # Import only main dashboards (skip documentation dashboards)
+    $(basename "$0") --user myuser --password mypass --skip-docs import
+
+    # Import documentation dashboards to a separate folder
+    $(basename "$0") --user myuser --password mypass --folder "Dashboards" --docs-folder "Documentation" import
 
 EOF
     exit 1
@@ -521,15 +532,30 @@ cmd_list() {
     
     test_connection || exit 1
     
+    # List main folder
     local folder_uid
     folder_uid=$(get_folder_uid "$FOLDER_TITLE")
     
     if [ -z "$folder_uid" ]; then
         print_warning "Folder '$FOLDER_TITLE' not found"
-        exit 1
+    else
+        print_info "Main dashboards folder: $FOLDER_TITLE"
+        list_dashboards_in_folder "$folder_uid"
     fi
     
-    list_dashboards_in_folder "$folder_uid"
+    # List docs folder if specified and different from main folder
+    if [ -n "$DOCS_FOLDER" ] && [ "$DOCS_FOLDER" != "$FOLDER_TITLE" ]; then
+        echo ""
+        local docs_folder_uid
+        docs_folder_uid=$(get_folder_uid "$DOCS_FOLDER")
+        
+        if [ -z "$docs_folder_uid" ]; then
+            print_warning "Docs folder '$DOCS_FOLDER' not found"
+        else
+            print_info "Documentation dashboards folder: $DOCS_FOLDER"
+            list_dashboards_in_folder "$docs_folder_uid"
+        fi
+    fi
 }
 
 cmd_import() {
@@ -537,7 +563,7 @@ cmd_import() {
     
     test_connection || exit 1
     
-    # Ensure folder exists
+    # Ensure main folder exists
     local folder_uid
     folder_uid=$(ensure_folder "$FOLDER_TITLE")
     
@@ -546,8 +572,25 @@ cmd_import() {
         exit 1
     fi
     
+    # Ensure docs folder exists if specified
+    local docs_folder_uid="$folder_uid"
+    if [ -n "$DOCS_FOLDER" ] && [ "$SKIP_DOCS" != true ]; then
+        docs_folder_uid=$(ensure_folder "$DOCS_FOLDER")
+        if [ -z "$docs_folder_uid" ]; then
+            print_error "Failed to get/create docs folder"
+            exit 1
+        fi
+    fi
+    
     echo ""
-    print_info "Importing dashboards to folder: $FOLDER_TITLE"
+    print_info "Importing main dashboards to folder: $FOLDER_TITLE"
+    if [ "$SKIP_DOCS" != true ]; then
+        if [ -n "$DOCS_FOLDER" ]; then
+            print_info "Importing documentation dashboards to folder: $DOCS_FOLDER"
+        else
+            print_info "Importing documentation dashboards to folder: $FOLDER_TITLE"
+        fi
+    fi
     if [ -n "$NAMESPACE_FILTER" ]; then
         print_info "Namespace filter will be set to: $NAMESPACE_FILTER"
     fi
@@ -557,6 +600,9 @@ cmd_import() {
     if [ -n "$DATASOURCE_REGEX" ]; then
         print_info "Datasource regex will be set to: $DATASOURCE_REGEX"
     fi
+    if [ "$SKIP_DOCS" = true ]; then
+        print_info "Skipping documentation dashboards"
+    fi
     echo ""
     
     local success=0
@@ -564,8 +610,20 @@ cmd_import() {
     
     for dashboard_file in "${DASHBOARDS[@]}"; do
         local full_path="${DASHBOARD_DIR}/${dashboard_file}"
+        local target_folder_uid
         
-        if import_dashboard "$full_path" "$folder_uid" "$OVERWRITE" "$NAMESPACE_FILTER" "$WORKLOAD_KINDS" "$DATASOURCE_REGEX"; then
+        # Determine target folder based on dashboard type
+        if [[ "$dashboard_file" == *"-docs.json" ]]; then
+            # Skip docs if --skip-docs is set
+            if [ "$SKIP_DOCS" = true ]; then
+                continue
+            fi
+            target_folder_uid="$docs_folder_uid"
+        else
+            target_folder_uid="$folder_uid"
+        fi
+        
+        if import_dashboard "$full_path" "$target_folder_uid" "$OVERWRITE" "$NAMESPACE_FILTER" "$WORKLOAD_KINDS" "$DATASOURCE_REGEX"; then
             ((success++))
         else
             ((failed++))
@@ -586,11 +644,41 @@ cmd_delete() {
     
     test_connection || exit 1
     
+    # Build list of UIDs to delete based on --skip-docs
+    local uids_to_delete=()
+    local main_uids=("workload-resource-analysis" "workload-resource-workload")
+    local docs_uids=("workload-resource-analysis-docs" "workload-resource-workload-docs")
+    
+    # Always include main dashboards
+    uids_to_delete+=("${main_uids[@]}")
+    
+    # Include docs unless --skip-docs is set
+    if [ "$SKIP_DOCS" != true ]; then
+        uids_to_delete+=("${docs_uids[@]}")
+    fi
+    
     echo ""
     print_warning "This will delete the following dashboards:"
-    for uid in "${DASHBOARD_UIDS[@]}"; do
+    echo ""
+    print_info "Main dashboards (folder: $FOLDER_TITLE):"
+    for uid in "${main_uids[@]}"; do
         echo "  - $uid"
     done
+    
+    if [ "$SKIP_DOCS" != true ]; then
+        echo ""
+        local docs_folder_display="$FOLDER_TITLE"
+        if [ -n "$DOCS_FOLDER" ]; then
+            docs_folder_display="$DOCS_FOLDER"
+        fi
+        print_info "Documentation dashboards (folder: $docs_folder_display):"
+        for uid in "${docs_uids[@]}"; do
+            echo "  - $uid"
+        done
+    else
+        echo ""
+        print_info "Skipping documentation dashboards (--skip-docs)"
+    fi
     echo ""
     
     read -p "Are you sure you want to continue? (y/N) " -n 1 -r
@@ -606,7 +694,7 @@ cmd_delete() {
     local success=0
     local failed=0
     
-    for uid in "${DASHBOARD_UIDS[@]}"; do
+    for uid in "${uids_to_delete[@]}"; do
         if delete_dashboard "$uid"; then
             ((success++))
         else
@@ -696,6 +784,14 @@ main() {
                     print_error "Invalid Grafana version: $GRAFANA_VERSION. Use 10 or 11."
                     exit 1
                 fi
+                shift 2
+                ;;
+            --skip-docs)
+                SKIP_DOCS=true
+                shift
+                ;;
+            --docs-folder)
+                DOCS_FOLDER="$2"
                 shift 2
                 ;;
             -h|--help)
