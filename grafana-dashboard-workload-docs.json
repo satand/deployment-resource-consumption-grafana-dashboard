@@ -297,11 +297,11 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## \ud83d\udd25 CPU Usage: $workload\n\n### Purpose\nTime series visualization showing CPU consumption for the selected workload over time, compared against configured request/limit.\n\n### Lines\n| Line | Style | Color | Description |\n|------|-------|-------|-------------|\n| Usage | Solid | Auto | Actual CPU consumption over time |\n| Request | Dashed | \ud83d\udfe0 Orange | CPU request from manifest - guaranteed allocation |\n| Limit | Dashed | \ud83d\udd34 Red | CPU limit from manifest - maximum before throttling |\n\n### Interpretation\n- **Usage below Request**: Under-utilizing allocated resources\n- **Usage between Request and Limit**: Using burst capacity (normal for bursty workloads)\n- **Usage at/near Limit**: Throttling occurring - consider increasing limit",
+        "content": "## \ud83d\udd25 CPU Usage\n\n### Purpose\nTime series visualization showing CPU consumption for the selected workload over time, compared against configured request/limit.\n\n### Lines\n| Line | Style | Color | Description |\n|------|-------|-------|-------------|\n| Usage | Solid | Auto | Actual CPU consumption over time |\n| Request | Dashed | \ud83d\udfe0 Orange | CPU request from manifest - guaranteed allocation |\n| Limit | Dashed | \ud83d\udd34 Red | CPU limit from manifest - maximum before throttling |\n\n### Interpretation\n- **Usage below Request**: Under-utilizing allocated resources\n- **Usage between Request and Limit**: Using burst capacity (normal for bursty workloads)\n- **Usage at/near Limit**: Throttling occurring - consider increasing limit",
         "mode": "markdown"
       },
       "pluginVersion": "10.4.3",
-      "title": "\ud83d\udd25 CPU Usage: $workload",
+      "title": "\ud83d\udd25 CPU Usage",
       "type": "text"
     },
     {
@@ -318,11 +318,11 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## \ud83d\udcbe Memory Usage: $workload\n\n### Purpose\nTime series visualization showing memory consumption for the selected workload over time, compared against configured request/limit.\n\n### Lines\n| Line | Style | Color | Description |\n|------|-------|-------|-------------|\n| Usage | Solid | Auto | Actual memory working set over time |\n| Request | Dashed | \ud83d\udfe0 Orange | Memory request from manifest - guaranteed allocation |\n| Limit | Dashed | \ud83d\udd34 Red | Memory limit from manifest - OOM kill threshold |\n\n### Interpretation\n- **Usage below Request**: Under-utilizing allocated resources\n- **Usage between Request and Limit**: Using burst capacity\n- **Usage approaching Limit**: \u26a0\ufe0f OOM kill risk - consider increasing limit immediately\n- **Sudden drops to zero**: May indicate OOM kills and container restarts",
+        "content": "## \ud83d\udcbe Memory Usage\n\n### Purpose\nTime series visualization showing memory consumption for the selected workload over time, compared against configured request/limit.\n\n### Lines\n| Line | Style | Color | Description |\n|------|-------|-------|-------------|\n| Usage | Solid | Auto | Actual memory working set over time |\n| Request | Dashed | \ud83d\udfe0 Orange | Memory request from manifest - guaranteed allocation |\n| Limit | Dashed | \ud83d\udd34 Red | Memory limit from manifest - OOM kill threshold |\n\n### Interpretation\n- **Usage below Request**: Under-utilizing allocated resources\n- **Usage between Request and Limit**: Using burst capacity\n- **Usage approaching Limit**: \u26a0\ufe0f OOM kill risk - consider increasing limit immediately\n- **Sudden drops to zero**: May indicate OOM kills and container restarts",
         "mode": "markdown"
       },
       "pluginVersion": "10.4.3",
-      "title": "\ud83d\udcbe Memory Usage: $workload",
+      "title": "\ud83d\udcbe Memory Usage",
       "type": "text"
     },
     {
