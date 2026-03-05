@@ -14,6 +14,10 @@ A comprehensive suite of Grafana dashboards for analyzing Kubernetes workload re
 - Time distribution by resource zone
 - **Simulation rows** for Aggressive and Normal optimization profiles
 
+![Namespace Resource Consumption](pictures/namespace-resource-consumption.jpeg)
+
+![Namespace Resource Consumption Analysis](pictures/namespace-resource-consumption-analysis.jpeg)
+
 ### 🔍 Workload Details Dashboard (`grafana-dashboard-workload.json`)
 - **UID**: `workload-resource-workload`
 - Deep-dive analysis for individual workloads
@@ -21,6 +25,8 @@ A comprehensive suite of Grafana dashboards for analyzing Kubernetes workload re
 - Gauge panels for utilization percentages and limit/request ratios
 - Per-pod breakdown for troubleshooting
 - **Simulation rows** with Aggressive and Normal profile recommendations
+
+![Workload Resource Consumption](pictures/workload-resource-consumption.jpeg)
 
 ## Documentation Dashboards
 
@@ -46,6 +52,18 @@ Both dashboards include simulation rows that calculate hypothetical request/limi
 
 - **Normal** — Safe default for most workloads. Requests are generous (P95+ for CPU, Max for Memory), giving the scheduler plenty of guaranteed capacity. Limits provide ample headroom, especially for memory (50% above max) to prevent OOM kills. Best for production services where stability matters more than cost.
 - **Aggressive** — Cost-optimized profile that sets lower requests (P90 for CPU, P95 for Memory), reclaiming unused reservations. Limits are tighter (25% above max), reducing cluster overhead. Best for non-critical or stable workloads where saving cluster capacity is a priority.
+
+#### Normal Profile
+
+![Namespace Normal Profile Simulation](pictures/namespace-normal-profile-resource-consumption.jpeg)
+
+![Workload Normal Profile Simulation](pictures/workload-normal-profile-resource-consumption.jpeg)
+
+#### Aggressive Profile
+
+![Namespace Aggressive Profile Simulation](pictures/namespace-aggressive-profile-resource-consumption.jpeg)
+
+![Workload Aggressive Profile Simulation](pictures/workload-aggressive-profile-resource-consumption.jpeg)
 
 | Aspect | Normal | Aggressive |
 |--------|--------|------------|
