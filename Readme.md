@@ -150,12 +150,16 @@ export GRAFANA_PASSWORD="secret"
 
 - **Grafana 11.x+**: Use default dashboards (`--grafana-version 11` or omit the flag)
 - **Grafana 10.x**: Use v10 dashboards (`--grafana-version 10`)
-- Prometheus datasource with Kubernetes metrics:
-  - `container_cpu_usage_seconds_total`
-  - `container_memory_working_set_bytes`
-  - `kube_pod_info`
-  - `kube_pod_container_resource_requests`
-  - `kube_pod_container_resource_limits`
+- Prometheus datasource with the following Kubernetes metrics:
+
+| Metric | Source | Role |
+|--------|--------|------|
+| `container_cpu_usage_seconds_total` | cAdvisor / Kubelet | Actual CPU consumption (used with `rate()`) |
+| `container_memory_working_set_bytes` | cAdvisor / Kubelet | Actual memory consumption (working set) |
+| `kube_pod_container_resource_requests` | kube-state-metrics | Configured CPU and memory requests |
+| `kube_pod_container_resource_limits` | kube-state-metrics | Configured CPU and memory limits |
+| `kube_pod_info` | kube-state-metrics | Pod metadata — joins pods to their owning workload via `created_by_name` / `created_by_kind` |
+| `kube_pod_container_info` | kube-state-metrics | Container metadata — used to compute resource configuration coverage (SET ALL / PARTIAL / UNSET) |
 
 ## Version Compatibility
 
